@@ -4,3 +4,5 @@
 
 /.vs/CodeCommitMessageParser/v15/Server/sqlite3
 /CodeCommitMessageParser/obj/Debug
+/CodeCommitMessageParser/bin
+/CodeCommitMessageParser/obj/Release
