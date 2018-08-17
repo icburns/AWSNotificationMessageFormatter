@@ -22,7 +22,7 @@ namespace CodeCommitMessageParser
 		private void CodeCommitMessageParser_Startup(object sender, EventArgs e)
         {
 			currentExplorer = Application.ActiveExplorer();
-			currentExplorer.SelectionChange += new ExplorerEvents_10_SelectionChangeEventHandler(CurrentExplorer_Event);
+			currentExplorer.SelectionChange += new ExplorerEvents_10_SelectionChangeEventHandler(CurrentExplorer_Handler);
 		}
 
 		private void CodeCommitMessageParser_Shutdown(object sender, EventArgs e)
@@ -31,7 +31,7 @@ namespace CodeCommitMessageParser
 			//    must run when Outlook shuts down, see https://go.microsoft.com/fwlink/?LinkId=506785
 		}
 
-		private void CurrentExplorer_Event()
+		private void CurrentExplorer_Handler()
 		{
 			if (!fullParseRequired)
 			{
@@ -46,15 +46,17 @@ namespace CodeCommitMessageParser
 				return;
 			}
 
+			selectedFolder.Items.ItemAdd += new ItemsEvents_ItemAddEventHandler(ItemAdd_Handler);
+
 			foreach (var item in selectedFolder.Items) {
 
 				if (item is MailItem)
 				{
 					MailItem mailItem = item as MailItem;
-					if (//mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
-						//mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
+					if (mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
+						mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
 						mailItem.Body != null &&
-						mailItem.Body.Contains("A pull request event occurred in the following AWS CodeCommit repository:"))//mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX))
+						mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX))
 					{
 						mailItem.Subject = GetNewSubject(mailItem.Body);
 						mailItem.Save();
@@ -63,6 +65,22 @@ namespace CodeCommitMessageParser
 			}
 
 			fullParseRequired = false;
+		}
+
+		private void ItemAdd_Handler(object newItem)
+		{
+			if (newItem is MailItem)
+			{
+				MailItem mailItem = newItem as MailItem;
+				if (mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
+					mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
+					mailItem.Body != null &&
+					mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX))
+				{
+					mailItem.Subject = GetNewSubject(mailItem.Body);
+					mailItem.Save();
+				}
+			}
 		}
 
 		private string GetNewSubject(string body)
