@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
 using Microsoft.Office.Interop.Outlook;
 
 namespace CodeCommitMessageParser
@@ -15,14 +14,27 @@ namespace CodeCommitMessageParser
 		const string MERGED_IDENTIFIER = "The status is merged. ";
 		const string PULL_REQUEST_NUMBER_IDENTIFIER = "the following PullRequest";
 
-		bool fullParseRequired = true;
-
-		Explorer currentExplorer;
+		Folder inbox;
 
 		private void CodeCommitMessageParser_Startup(object sender, EventArgs e)
         {
-			currentExplorer = Application.ActiveExplorer();
-			currentExplorer.SelectionChange += new ExplorerEvents_10_SelectionChangeEventHandler(CurrentExplorer_Handler);
+			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
+
+			Application.NewMailEx += new ApplicationEvents_11_NewMailExEventHandler(NewMailEx_Handler);
+
+			//newMailEx seems to be more reliable
+			//inbox.Items.ItemAdd += new ItemsEvents_ItemAddEventHandler(ItemAdd_Handler);
+
+			foreach (var item in inbox.Items)
+			{
+				if (item is MailItem)
+				{
+					MailItem mailItem = item as MailItem;
+
+					ProcessMessage(mailItem);
+				}
+			}
+			
 		}
 
 		private void CodeCommitMessageParser_Shutdown(object sender, EventArgs e)
@@ -31,55 +43,35 @@ namespace CodeCommitMessageParser
 			//    must run when Outlook shuts down, see https://go.microsoft.com/fwlink/?LinkId=506785
 		}
 
-		private void CurrentExplorer_Handler()
+		private void NewMailEx_Handler(string newItemId)
 		{
-			if (!fullParseRequired)
-			{
-				return;
-			}
+			var mapiInbox = inbox as MAPIFolder;
+			object newItem = Application.GetNamespace("MAPI").GetItemFromID(newItemId, mapiInbox.StoreID);
+			MailItem mailItem;
 
-			Folder selectedFolder =
-				this.Application.ActiveExplorer().CurrentFolder as Folder;
-
-			if (selectedFolder.Name != "Inbox")
-			{
-				return;
-			}
-
-			selectedFolder.Items.ItemAdd += new ItemsEvents_ItemAddEventHandler(ItemAdd_Handler);
-
-			foreach (var item in selectedFolder.Items) {
-
-				if (item is MailItem)
-				{
-					MailItem mailItem = item as MailItem;
-					if (mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
-						mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
-						mailItem.Body != null &&
-						mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX))
-					{
-						mailItem.Subject = GetNewSubject(mailItem.Body);
-						mailItem.Save();
-					}
-				}
-			}
-
-			fullParseRequired = false;
-		}
-
-		private void ItemAdd_Handler(object newItem)
-		{
 			if (newItem is MailItem)
 			{
-				MailItem mailItem = newItem as MailItem;
-				if (mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
-					mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
-					mailItem.Body != null &&
-					mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX))
-				{
-					mailItem.Subject = GetNewSubject(mailItem.Body);
-					mailItem.Save();
-				}
+				mailItem = newItem as MailItem;
+
+				ProcessMessage(mailItem);
+			}
+		}
+
+		private void ProcessMessage(MailItem mailItem)
+		{
+			bool shouldParse = mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
+				mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
+				mailItem.Body != null &&
+				mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX);
+
+			// for debug
+			//shouldParse = mailItem.Subject == "test" &&
+			//	(mailItem.SenderEmailAddress == "ianb@slalom.com" || mailItem.SenderEmailAddress.Contains("IAN BURNS"));
+
+			if (shouldParse)
+			{
+				mailItem.Subject = GetNewSubject(mailItem.Body);
+				mailItem.Save();
 			}
 		}
 
