@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using Microsoft.Office.Interop.Outlook;
+using AWSNotificationMessageFormatter.Constants;
 
 namespace AWSNotificationMessageFormatter
 {
     public partial class AWSNotificationMessageFormatter
     {
-		const string CODE_COMMIT_MESSAGE_SUBJECT = "AWS Notification Message";
-		const string CODE_COMMIT_EMAIL = "no-reply@sns.amazonaws.com";
-		const string CODE_COMMIT_BODY_PREFIX = "\"A pull request event occurred in the following AWS CodeCommit repository: ";
-		const string COMMENT_IDENTIFIER = "made a comment or replied to a comment ";
-		const string CREATED_IDENTIFIER = "made the following PullRequest ";
-		const string MERGED_IDENTIFIER = "The status is merged. ";
-		const string PULL_REQUEST_NUMBER_IDENTIFIER = "the following PullRequest";
 
 		Folder inbox;
 
@@ -59,38 +53,41 @@ namespace AWSNotificationMessageFormatter
 
 		private void ProcessMessage(MailItem mailItem)
 		{
-			bool shouldParse = mailItem.Subject == CODE_COMMIT_MESSAGE_SUBJECT &&
-				mailItem.SenderEmailAddress == CODE_COMMIT_EMAIL &&
-				mailItem.Body != null &&
-				mailItem.Body.StartsWith(CODE_COMMIT_BODY_PREFIX);
+			bool isAwsNotification = mailItem.Subject == AWSNotification.MESSAGE_SUBJECT &&
+				mailItem.SenderEmailAddress == AWSNotification.EMAIL_ADDRESS &&
+				mailItem.Body != null;
 
-			// for debug
-			//shouldParse = mailItem.Subject == "test" &&
-			//	(mailItem.SenderEmailAddress == "ianb@slalom.com" || mailItem.SenderEmailAddress.Contains("IAN BURNS"));
-
-			if (shouldParse)
+			if (isAwsNotification)
 			{
-				mailItem.Subject = GetNewSubject(mailItem.Body);
+				if (mailItem.Body.StartsWith(CodeCommit.BODY_PREFIX))
+				{
+					mailItem.Subject = GetNewCodeCommitSubject(mailItem.Body);
+				}
+				else if (mailItem.Body.StartsWith(CodePipeline.BODY_PREFIX))
+				{
+					mailItem.Subject = GetNewCodePipelineSubject(mailItem.Body);
+				}
+
 				mailItem.Save();
 			}
 		}
 
-		private string GetNewSubject(string body)
+		private string GetNewCodeCommitSubject(string body)
 		{
 			int startUserIndex = body.IndexOf("arn:aws:") + 8;
 			string[] userTokens = body.Substring(startUserIndex).Split(' ')[0].Split('/');
 			string user = userTokens[userTokens.Length - 1];
 
 			string action = "";
-			if (body.Contains(COMMENT_IDENTIFIER))
+			if (body.Contains(CodeCommit.COMMENT_IDENTIFIER))
 			{
 				action = "commented on";
 			}
-			else if (body.Contains(CREATED_IDENTIFIER))
+			else if (body.Contains(CodeCommit.CREATED_IDENTIFIER))
 			{
 				action = "created";
 			}
-			else if (body.Contains(MERGED_IDENTIFIER))
+			else if (body.Contains(CodeCommit.MERGED_IDENTIFIER))
 			{
 				action = "merged";
 			}
@@ -99,15 +96,40 @@ namespace AWSNotificationMessageFormatter
 				action = "updated";
 			}
 
-			int pullRequestNumberIndex = body.IndexOf(PULL_REQUEST_NUMBER_IDENTIFIER + ": ") != -1 ?
-											body.IndexOf(PULL_REQUEST_NUMBER_IDENTIFIER + ": ") :
-											body.IndexOf(PULL_REQUEST_NUMBER_IDENTIFIER + " ");
-			string pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[1], "[^0-9]", "");
-			string repository = body.Substring(CODE_COMMIT_BODY_PREFIX.Length).Split(' ')[0];
+			int pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") != -1 ?
+											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") :
+											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + " ");
+			string pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[1], "[^0-9]", "");
+			string repository = body.Substring(CodeCommit.BODY_PREFIX.Length).Split(' ')[0];
 			string reference = $"pull request {pullRequestNumber} in {repository}";
 
 			return $"{user} {action} {reference}";
 		}
+
+		private string GetNewCodePipelineSubject(string body)
+		{
+			string status = "";
+			if (body.Contains(CodePipeline.FAILED_IDENTIFIER))
+			{
+				status = "pipeline failed";
+			}
+			else
+			{
+				status = "pipeline event";
+			}
+
+			string eventId = body.Substring(body.IndexOf(CodePipeline.EVENT_ID_IDENTIFIER) + CodePipeline.EVENT_ID_IDENTIFIER.Length).Split(' ')[0];
+
+			string repository = CodePipeline.REPOSITORY;
+
+			string[] stageTokens = body.Substring(0, body.IndexOf(CodePipeline.STAGE_IDENTIFIER)).Split(' ');
+
+			string stage = stageTokens[stageTokens.Length - 1];
+
+			return $"{status} for {repository} in {stage.ToLower()} on execution: {eventId}";
+		}
+
+
 
 		/// <summary>
 		/// Required method for Designer support - do not modify
