@@ -6,3 +6,6 @@
 /CodeCommitMessageParser/obj/Debug
 /CodeCommitMessageParser/bin
 /CodeCommitMessageParser/obj/Release
+/.vs/AWSNotificationMessageFormatter/v15/Server/sqlite3
+/AWSNotificationMessageFormatter/bin
+/AWSNotificationMessageFormatter/obj

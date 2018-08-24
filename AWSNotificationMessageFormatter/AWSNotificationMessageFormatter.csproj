@@ -24,8 +24,8 @@
     <ProjectGuid>{54DF61FE-CC8A-4929-A13E-96973FE92819}</ProjectGuid>
     <OutputType>Library</OutputType>
     <NoStandardLibraries>false</NoStandardLibraries>
-    <RootNamespace>CodeCommitMessageParser</RootNamespace>
-    <AssemblyName>CodeCommitMessageParser</AssemblyName>
+    <RootNamespace>AWSNotificationMessageFormatter</RootNamespace>
+    <AssemblyName>AWSNotificationMessageFormatter</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <DefineConstants>VSTO40</DefineConstants>
     <IsWebBootstrapper>False</IsWebBootstrapper>
@@ -38,10 +38,10 @@
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>7</UpdateInterval>
     <UpdateIntervalUnits>days</UpdateIntervalUnits>
-    <ProductName>CodeCommitMessageParser</ProductName>
+    <ProductName>AWSNotificationMessageFormatter</ProductName>
     <PublisherName />
     <SupportUrl />
-    <FriendlyName>CodeCommitMessageParser</FriendlyName>
+    <FriendlyName>AWSNotificationMessageFormatter</FriendlyName>
     <OfficeApplicationDescription />
     <LoadBehavior>3</LoadBehavior>
   </PropertyGroup>
@@ -194,7 +194,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <None Include="CodeCommitMessageParser_TemporaryKey.pfx" />
+    <None Include="AWSNotificationMessageFormatter_TemporaryKey.pfx" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -203,14 +203,14 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="CodeCommitMessageParser.cs">
+    <Compile Include="AWSNotificationMessageFormatter.cs">
       <SubType>Code</SubType>
     </Compile>
-    <None Include="CodeCommitMessageParser.Designer.xml">
-      <DependentUpon>CodeCommitMessageParser.cs</DependentUpon>
+    <None Include="AWSNotificationMessageFormatter.Designer.xml">
+      <DependentUpon>AWSNotificationMessageFormatter.cs</DependentUpon>
     </None>
-    <Compile Include="CodeCommitMessageParser.Designer.cs">
-      <DependentUpon>CodeCommitMessageParser.Designer.xml</DependentUpon>
+    <Compile Include="AWSNotificationMessageFormatter.Designer.cs">
+      <DependentUpon>AWSNotificationMessageFormatter.Designer.xml</DependentUpon>
     </Compile>
     <AppDesigner Include="Properties\" />
   </ItemGroup>
@@ -222,7 +222,7 @@
     <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>CodeCommitMessageParser_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>AWSNotificationMessageFormatter_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ManifestCertificateThumbprint>52E4F4A90FE747FE9DC2701F031BDD3C9AFEDA19</ManifestCertificateThumbprint>
@@ -236,8 +236,8 @@
     <VisualStudio>
       <FlavorProperties GUID="{BAA0C2D2-18E2-41B9-852F-F413020CAA33}">
         <ProjectProperties HostName="Outlook" HostPackage="{29A7B9D7-A7F1-4328-8EF0-6B2D1A56B2C1}" OfficeVersion="15.0" VstxVersion="4.0" ApplicationType="Outlook" Language="cs" TemplatesPath="" DebugInfoExeName="#Software\Microsoft\Office\16.0\Outlook\InstallRoot\Path#outlook.exe" AddItemTemplatesGuid="{A58A78EB-1C92-4DDD-80CF-E8BD872ABFC4}" />
-        <Host Name="Outlook" GeneratedCodeNamespace="CodeCommitMessageParser" PublishedHash="69C324AB27932AA2FBF2B7EA72250886FF164DE6" IconIndex="0">
-          <HostItem Name="ThisAddIn" Code="CodeCommitMessageParser.cs" CanonicalName="AddIn" CanActivate="false" IconIndex="1" Blueprint="CodeCommitMessageParser.Designer.xml" GeneratedCode="CodeCommitMessageParser.Designer.cs" PublishedHash="B5C7CFF5DE8F1CAF35500081D0DE9B09F6F8584E" />
+        <Host Name="Outlook" GeneratedCodeNamespace="AWSNotificationMessageFormatter" PublishedHash="69C324AB27932AA2FBF2B7EA72250886FF164DE6" IconIndex="0">
+          <HostItem Name="ThisAddIn" Code="AWSNotificationMessageFormatter.cs" CanonicalName="AddIn" PublishedHash="B5C7CFF5DE8F1CAF35500081D0DE9B09F6F8584E" CanActivate="false" IconIndex="1" Blueprint="AWSNotificationMessageFormatter.Designer.xml" GeneratedCode="AWSNotificationMessageFormatter.Designer.cs" />
         </Host>
       </FlavorProperties>
     </VisualStudio>

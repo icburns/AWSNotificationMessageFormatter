@@ -9,13 +9,13 @@
 //------------------------------------------------------------------------------
 
 #pragma warning disable 414
-namespace CodeCommitMessageParser {
+namespace AWSNotificationMessageFormatter {
     
     
     /// 
     [Microsoft.VisualStudio.Tools.Applications.Runtime.StartupObjectAttribute(0)]
     [global::System.Security.Permissions.PermissionSetAttribute(global::System.Security.Permissions.SecurityAction.Demand, Name="FullTrust")]
-    public sealed partial class CodeCommitMessageParser : Microsoft.Office.Tools.Outlook.OutlookAddInBase {
+    public sealed partial class AWSNotificationMessageFormatter : Microsoft.Office.Tools.Outlook.OutlookAddInBase {
         
         internal Microsoft.Office.Tools.CustomTaskPaneCollection CustomTaskPanes;
         
@@ -28,7 +28,7 @@ namespace CodeCommitMessageParser {
         /// 
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public CodeCommitMessageParser(global::Microsoft.Office.Tools.Outlook.Factory factory, global::System.IServiceProvider serviceProvider) : 
+        public AWSNotificationMessageFormatter(global::Microsoft.Office.Tools.Outlook.Factory factory, global::System.IServiceProvider serviceProvider) : 
                 base(factory, serviceProvider, "AddIn", "ThisAddIn") {
             Globals.Factory = factory;
         }
@@ -40,7 +40,7 @@ namespace CodeCommitMessageParser {
         protected override void Initialize() {
             base.Initialize();
             this.Application = this.GetHostItem<Microsoft.Office.Interop.Outlook.Application>(typeof(Microsoft.Office.Interop.Outlook.Application), "Application");
-            Globals.CodeCommitMessageParser = this;
+            Globals.AWSNotificationMessageFormatter = this;
             global::System.Windows.Forms.Application.EnableVisualStyles();
             this.InitializeCachedData();
             this.InitializeControls();
@@ -174,7 +174,7 @@ namespace CodeCommitMessageParser {
         private Globals() {
         }
         
-        private static CodeCommitMessageParser _CodeCommitMessageParser;
+        private static AWSNotificationMessageFormatter _AWSNotificationMessageFormatter;
         
         private static global::Microsoft.Office.Tools.Outlook.Factory _factory;
         
@@ -182,13 +182,13 @@ namespace CodeCommitMessageParser {
         
         private static ThisFormRegionCollection _ThisFormRegionCollection;
         
-        internal static CodeCommitMessageParser CodeCommitMessageParser {
+        internal static AWSNotificationMessageFormatter AWSNotificationMessageFormatter {
             get {
-                return _CodeCommitMessageParser;
+                return _AWSNotificationMessageFormatter;
             }
             set {
-                if ((_CodeCommitMessageParser == null)) {
-                    _CodeCommitMessageParser = value;
+                if ((_AWSNotificationMessageFormatter == null)) {
+                    _AWSNotificationMessageFormatter = value;
                 }
                 else {
                     throw new System.NotSupportedException();
@@ -222,7 +222,7 @@ namespace CodeCommitMessageParser {
         internal static ThisFormRegionCollection FormRegions {
             get {
                 if ((_ThisFormRegionCollection == null)) {
-                    _ThisFormRegionCollection = new ThisFormRegionCollection(Globals.CodeCommitMessageParser.GetFormRegions());
+                    _ThisFormRegionCollection = new ThisFormRegionCollection(Globals.AWSNotificationMessageFormatter.GetFormRegions());
                 }
                 return _ThisFormRegionCollection;
             }
@@ -263,13 +263,13 @@ namespace CodeCommitMessageParser {
         
         internal WindowFormRegionCollection this[Microsoft.Office.Interop.Outlook.Explorer explorer] {
             get {
-                return ((WindowFormRegionCollection)(Globals.CodeCommitMessageParser.GetFormRegions(explorer, typeof(WindowFormRegionCollection))));
+                return ((WindowFormRegionCollection)(Globals.AWSNotificationMessageFormatter.GetFormRegions(explorer, typeof(WindowFormRegionCollection))));
             }
         }
         
         internal WindowFormRegionCollection this[Microsoft.Office.Interop.Outlook.Inspector inspector] {
             get {
-                return ((WindowFormRegionCollection)(Globals.CodeCommitMessageParser.GetFormRegions(inspector, typeof(WindowFormRegionCollection))));
+                return ((WindowFormRegionCollection)(Globals.AWSNotificationMessageFormatter.GetFormRegions(inspector, typeof(WindowFormRegionCollection))));
             }
         }
     }

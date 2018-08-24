@@ -2,9 +2,9 @@
 using System.Text.RegularExpressions;
 using Microsoft.Office.Interop.Outlook;
 
-namespace CodeCommitMessageParser
+namespace AWSNotificationMessageFormatter
 {
-    public partial class CodeCommitMessageParser
+    public partial class AWSNotificationMessageFormatter
     {
 		const string CODE_COMMIT_MESSAGE_SUBJECT = "AWS Notification Message";
 		const string CODE_COMMIT_EMAIL = "no-reply@sns.amazonaws.com";
@@ -16,7 +16,7 @@ namespace CodeCommitMessageParser
 
 		Folder inbox;
 
-		private void CodeCommitMessageParser_Startup(object sender, EventArgs e)
+		private void AWSNotificationMessageFormatter_Startup(object sender, EventArgs e)
         {
 			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
 
@@ -37,7 +37,7 @@ namespace CodeCommitMessageParser
 			
 		}
 
-		private void CodeCommitMessageParser_Shutdown(object sender, EventArgs e)
+		private void AWSNotificationMessageFormatter_Shutdown(object sender, EventArgs e)
 		{
 			// Note: Outlook no longer raises this event. If you have code that 
 			//    must run when Outlook shuts down, see https://go.microsoft.com/fwlink/?LinkId=506785
@@ -115,8 +115,8 @@ namespace CodeCommitMessageParser
 		/// </summary>
 		private void InternalStartup()
         {
-            Startup += new EventHandler(CodeCommitMessageParser_Startup);
-            Shutdown += new EventHandler(CodeCommitMessageParser_Shutdown);
+            Startup += new EventHandler(AWSNotificationMessageFormatter_Startup);
+            Shutdown += new EventHandler(AWSNotificationMessageFormatter_Shutdown);
         }
         
     }
