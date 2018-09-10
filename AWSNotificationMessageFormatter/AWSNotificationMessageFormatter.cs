@@ -16,8 +16,6 @@ namespace AWSNotificationMessageFormatter
 
 			Application.NewMailEx += new ApplicationEvents_11_NewMailExEventHandler(NewMailEx_Handler);
 
-			//newMailEx seems to be more reliable
-			//inbox.Items.ItemAdd += new ItemsEvents_ItemAddEventHandler(ItemAdd_Handler);
 
 			foreach (var item in inbox.Items)
 			{
@@ -53,22 +51,27 @@ namespace AWSNotificationMessageFormatter
 
 		private void ProcessMessage(MailItem mailItem)
 		{
-			bool isAwsNotification = mailItem.Subject == AWSNotification.MESSAGE_SUBJECT &&
+			bool isAwsNotification = 
 				mailItem.SenderEmailAddress == AWSNotification.EMAIL_ADDRESS &&
 				mailItem.Body != null;
+
+			string newSubject = mailItem.Subject;
 
 			if (isAwsNotification)
 			{
 				if (mailItem.Body.StartsWith(CodeCommit.BODY_PREFIX))
 				{
-					mailItem.Subject = GetNewCodeCommitSubject(mailItem.Body);
+					newSubject = GetNewCodeCommitSubject(mailItem.Body);
 				}
 				else if (mailItem.Body.StartsWith(CodePipeline.BODY_PREFIX))
 				{
-					mailItem.Subject = GetNewCodePipelineSubject(mailItem.Body);
+					newSubject = GetNewCodePipelineSubject(mailItem.Body);
 				}
 
-				mailItem.Save();
+				if (newSubject != mailItem.Subject)
+				{
+					mailItem.Save();
+				}
 			}
 		}
 
@@ -96,10 +99,20 @@ namespace AWSNotificationMessageFormatter
 				action = "updated";
 			}
 
-			int pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") != -1 ?
-											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") :
-											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + " ");
-			string pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[1], "[^0-9]", "");
+			int pullRequestNumberIndex = -1;
+			string pullRequestNumber = "";
+
+			if (body.Contains(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER))
+			{
+				pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER);
+				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
+			}
+			else if (body.Contains(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER))
+			{
+				pullRequestNumberIndex = body.IndexOf(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER);
+				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
+			}
+
 			string repository = body.Substring(CodeCommit.BODY_PREFIX.Length).Split(' ')[0];
 			string reference = $"pull request {pullRequestNumber} in {repository}";
 
