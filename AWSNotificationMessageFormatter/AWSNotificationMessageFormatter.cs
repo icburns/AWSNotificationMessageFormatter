@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
 using Microsoft.Office.Interop.Outlook;
 using AWSNotificationMessageFormatter.Constants;
 
@@ -15,16 +18,17 @@ namespace AWSNotificationMessageFormatter
 			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
 
 			Application.NewMailEx += new ApplicationEvents_11_NewMailExEventHandler(NewMailEx_Handler);
-
-
-			foreach (var item in inbox.Items)
+			IEnumerable<object> inboxObjects = ((IEnumerable)inbox.Items).Cast<object>().Take(500);
+			IEnumerable<MailItem> inboxItems = inboxObjects.Where(i => i is MailItem).Cast<MailItem>().ToList();
+			foreach (var item in inboxItems)
 			{
-				if (item is MailItem)
-				{
-					MailItem mailItem = item as MailItem;
+				MailItem mailItem = item as MailItem;
+				var r = mailItem.ReceivedTime;
+				var s = mailItem.SentOn;
+				var m = mailItem.LastModificationTime;
+				var c = mailItem.LastModificationTime;
 
-					ProcessMessage(mailItem);
-				}
+				ProcessMessage(mailItem);
 			}
 			
 		}
