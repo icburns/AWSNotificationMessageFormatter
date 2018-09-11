@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Collections;
+using System.ComponentModel;
 using System.Collections.Generic;
 using Microsoft.Office.Interop.Outlook;
 using AWSNotificationMessageFormatter.Constants;
@@ -15,28 +16,35 @@ namespace AWSNotificationMessageFormatter
 
 		private void AWSNotificationMessageFormatter_Startup(object sender, EventArgs e)
         {
-			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
 
 			Application.NewMailEx += new ApplicationEvents_11_NewMailExEventHandler(NewMailEx_Handler);
-			IEnumerable<object> inboxObjects = ((IEnumerable)inbox.Items).Cast<object>().Take(500);
-			IEnumerable<MailItem> inboxItems = inboxObjects.Where(i => i is MailItem).Cast<MailItem>().ToList();
-			foreach (var item in inboxItems)
-			{
-				MailItem mailItem = item as MailItem;
-				var r = mailItem.ReceivedTime;
-				var s = mailItem.SentOn;
-				var m = mailItem.LastModificationTime;
-				var c = mailItem.LastModificationTime;
 
-				ProcessMessage(mailItem);
-			}
-			
+
+			BackgroundWorker inboxProcessor = new BackgroundWorker();
+			inboxProcessor.DoWork += new DoWorkEventHandler(ProcessInbox_Handler);
+			inboxProcessor.RunWorkerAsync();
+		
 		}
 
 		private void AWSNotificationMessageFormatter_Shutdown(object sender, EventArgs e)
 		{
 			// Note: Outlook no longer raises this event. If you have code that 
 			//    must run when Outlook shuts down, see https://go.microsoft.com/fwlink/?LinkId=506785
+		}
+
+		private void ProcessInbox_Handler(object sender, EventArgs e)
+		{
+			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
+
+			IEnumerable<object> inboxObjects = ((IEnumerable)inbox.Items).Cast<object>();
+
+			IEnumerable<MailItem> inboxItems = inboxObjects.Where(i => i is MailItem).Cast<MailItem>().OrderByDescending(i => i.ReceivedTime).Take(200).ToList();
+
+			foreach (MailItem item in inboxItems)
+			{
+				ProcessMessage(item);
+			}
+
 		}
 
 		private void NewMailEx_Handler(string newItemId)
@@ -63,44 +71,45 @@ namespace AWSNotificationMessageFormatter
 
 			if (isAwsNotification)
 			{
-				if (mailItem.Body.StartsWith(CodeCommit.BODY_PREFIX))
+				if (mailItem.Body.StartsWith(CodeCommit.PULL_REQUEST_BODY_PREFIX))
 				{
-					newSubject = GetNewCodeCommitSubject(mailItem.Body);
+					newSubject = GetNewPullRequestSubject(mailItem.Body);
 				}
 				else if (mailItem.Body.StartsWith(CodePipeline.BODY_PREFIX))
 				{
 					newSubject = GetNewCodePipelineSubject(mailItem.Body);
 				}
+				else if (mailItem.Body.StartsWith(CodeCommit.CODE_COMPARE_COMMENT_BODY_PREFIX))
+				{
+					newSubject = GetNewCodeCompareSubject(mailItem.Body);
+				}
 
 				if (newSubject != mailItem.Subject)
 				{
+					mailItem.Subject = newSubject;
 					mailItem.Save();
 				}
 			}
 		}
 
-		private string GetNewCodeCommitSubject(string body)
+		private string GetNewPullRequestSubject(string body)
 		{
 			int startUserIndex = body.IndexOf("arn:aws:") + 8;
 			string[] userTokens = body.Substring(startUserIndex).Split(' ')[0].Split('/');
 			string user = userTokens[userTokens.Length - 1];
 
-			string action = "";
-			if (body.Contains(CodeCommit.COMMENT_IDENTIFIER))
+			string action = "updated";
+			if (body.Contains(CodeCommit.PULL_REQUEST_COMMENT_IDENTIFIER))
 			{
 				action = "commented on";
 			}
-			else if (body.Contains(CodeCommit.CREATED_IDENTIFIER))
+			else if (body.Contains(CodeCommit.PULL_REQUEST_CREATED_IDENTIFIER))
 			{
 				action = "created";
 			}
-			else if (body.Contains(CodeCommit.MERGED_IDENTIFIER))
+			else if (body.Contains(CodeCommit.PULL_REQUEST_MERGED_IDENTIFIER))
 			{
 				action = "merged";
-			}
-			else
-			{
-				action = "updated";
 			}
 
 			int pullRequestNumberIndex = -1;
@@ -111,13 +120,13 @@ namespace AWSNotificationMessageFormatter
 				pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER);
 				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
 			}
-			else if (body.Contains(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER))
+			else if (body.Contains(CodeCommit.PULL_REQUEST_ALT_NUMBER_IDENTIFIER))
 			{
-				pullRequestNumberIndex = body.IndexOf(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER);
-				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
+				pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_ALT_NUMBER_IDENTIFIER);
+				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_ALT_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
 			}
 
-			string repository = body.Substring(CodeCommit.BODY_PREFIX.Length).Split(' ')[0];
+			string repository = body.Substring(CodeCommit.PULL_REQUEST_BODY_PREFIX.Length).Split(' ')[0];
 			string reference = $"pull request {pullRequestNumber} in {repository}";
 
 			return $"{user} {action} {reference}";
@@ -125,14 +134,10 @@ namespace AWSNotificationMessageFormatter
 
 		private string GetNewCodePipelineSubject(string body)
 		{
-			string status = "";
+			string status = "pipeline event";
 			if (body.Contains(CodePipeline.FAILED_IDENTIFIER))
 			{
 				status = "pipeline failed";
-			}
-			else
-			{
-				status = "pipeline event";
 			}
 
 			string eventId = body.Substring(body.IndexOf(CodePipeline.EVENT_ID_IDENTIFIER) + CodePipeline.EVENT_ID_IDENTIFIER.Length).Split(' ')[0];
@@ -146,6 +151,20 @@ namespace AWSNotificationMessageFormatter
 			return $"{status} for {repository} in {stage.ToLower()} on execution: {eventId}";
 		}
 
+		private string GetNewCodeCompareSubject(string body)
+		{
+			int startUserIndex = body.IndexOf("arn:aws:") + 8;
+			string[] userTokens = body.Substring(startUserIndex).Split(' ')[0].Split('/');
+			string user = userTokens[userTokens.Length - 1];
+
+			string action = "updated";
+			if (body.Contains(CodeCommit.CODE_COMPARE_COMMENT_IDENTIFIER))
+			{
+				action = "commented on";
+			}
+
+			return $"{user} {action} a code comparison";
+		}
 
 
 		/// <summary>
