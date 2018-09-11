@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
 using Microsoft.Office.Interop.Outlook;
 using AWSNotificationMessageFormatter.Constants;
 
@@ -15,18 +18,17 @@ namespace AWSNotificationMessageFormatter
 			inbox = Application.Session.GetDefaultFolder(OlDefaultFolders.olFolderInbox) as Folder;
 
 			Application.NewMailEx += new ApplicationEvents_11_NewMailExEventHandler(NewMailEx_Handler);
-
-			//newMailEx seems to be more reliable
-			//inbox.Items.ItemAdd += new ItemsEvents_ItemAddEventHandler(ItemAdd_Handler);
-
-			foreach (var item in inbox.Items)
+			IEnumerable<object> inboxObjects = ((IEnumerable)inbox.Items).Cast<object>().Take(500);
+			IEnumerable<MailItem> inboxItems = inboxObjects.Where(i => i is MailItem).Cast<MailItem>().ToList();
+			foreach (var item in inboxItems)
 			{
-				if (item is MailItem)
-				{
-					MailItem mailItem = item as MailItem;
+				MailItem mailItem = item as MailItem;
+				var r = mailItem.ReceivedTime;
+				var s = mailItem.SentOn;
+				var m = mailItem.LastModificationTime;
+				var c = mailItem.LastModificationTime;
 
-					ProcessMessage(mailItem);
-				}
+				ProcessMessage(mailItem);
 			}
 			
 		}
@@ -53,22 +55,27 @@ namespace AWSNotificationMessageFormatter
 
 		private void ProcessMessage(MailItem mailItem)
 		{
-			bool isAwsNotification = mailItem.Subject == AWSNotification.MESSAGE_SUBJECT &&
+			bool isAwsNotification = 
 				mailItem.SenderEmailAddress == AWSNotification.EMAIL_ADDRESS &&
 				mailItem.Body != null;
+
+			string newSubject = mailItem.Subject;
 
 			if (isAwsNotification)
 			{
 				if (mailItem.Body.StartsWith(CodeCommit.BODY_PREFIX))
 				{
-					mailItem.Subject = GetNewCodeCommitSubject(mailItem.Body);
+					newSubject = GetNewCodeCommitSubject(mailItem.Body);
 				}
 				else if (mailItem.Body.StartsWith(CodePipeline.BODY_PREFIX))
 				{
-					mailItem.Subject = GetNewCodePipelineSubject(mailItem.Body);
+					newSubject = GetNewCodePipelineSubject(mailItem.Body);
 				}
 
-				mailItem.Save();
+				if (newSubject != mailItem.Subject)
+				{
+					mailItem.Save();
+				}
 			}
 		}
 
@@ -96,10 +103,20 @@ namespace AWSNotificationMessageFormatter
 				action = "updated";
 			}
 
-			int pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") != -1 ?
-											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + ": ") :
-											body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER + " ");
-			string pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[1], "[^0-9]", "");
+			int pullRequestNumberIndex = -1;
+			string pullRequestNumber = "";
+
+			if (body.Contains(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER))
+			{
+				pullRequestNumberIndex = body.IndexOf(CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER);
+				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
+			}
+			else if (body.Contains(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER))
+			{
+				pullRequestNumberIndex = body.IndexOf(CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER);
+				pullRequestNumber = Regex.Replace(body.Substring(pullRequestNumberIndex + CodeCommit.ALT_PULL_REQUEST_NUMBER_IDENTIFIER.Length).Split(' ')[0], "[^0-9]", "");
+			}
+
 			string repository = body.Substring(CodeCommit.BODY_PREFIX.Length).Split(' ')[0];
 			string reference = $"pull request {pullRequestNumber} in {repository}";
 
